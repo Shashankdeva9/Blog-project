@@ -3,76 +3,68 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model blogs {
+  id          String     @id
+  userId      String
+  title       String
+  slug        String     @unique
+  content     String
+  summary     String?
+  isPublished Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime
+  users       users      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments    comments[]
+  likes       likes[]
+
+  @@index([isPublished, createdAt(sort: Desc)])
+  @@index([userId])
+}
+
+model comments {
+  id        String   @id
+  blogId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  blogs     blogs    @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([blogId])
+  @@index([createdAt(sort: Desc)])
+}
+
+model likes {
+  id        String   @id
+  userId    String
+  blogId    String
+  createdAt DateTime @default(now())
+  blogs     blogs    @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, blogId])
+  @@index([blogId])
+}
+
+model users {
+  id           String     @id
+  email        String     @unique
+  name         String?
+  passwordHash String
+  role         Role       @default(USER)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime
+  blogs        blogs[]
+  comments     comments[]
+  likes        likes[]
 }
 
 enum Role {
   USER
   ADMIN
-}
-
-model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  name         String?
-  passwordHash String
-  role         Role      @default(USER)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  blogs    Blog[]
-  likes    Like[]
-  comments Comment[]
-
-  @@map("users")
-}
-
-model Blog {
-  id          String   @id @default(cuid())
-  userId      String
-  title       String
-  slug        String   @unique
-  content     String
-  summary     String?
-  isPublished Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  likes    Like[]
-  comments Comment[]
-
-  @@index([userId])
-  @@index([isPublished, createdAt(sort: Desc)])
-  @@map("blogs")
-}
-
-model Like {
-  id        String   @id @default(cuid())
-  userId    String
-  blogId    String
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  blog Blog @relation(fields: [blogId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, blogId])
-  @@index([blogId])
-  @@map("likes")
-}
-
-model Comment {
-  id        String   @id @default(cuid())
-  blogId    String
-  userId    String
-  content   String
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  blog Blog @relation(fields: [blogId], references: [id], onDelete: Cascade)
-
-  @@index([blogId])
-  @@index([createdAt(sort: Desc)])
-  @@map("comments")
 }
